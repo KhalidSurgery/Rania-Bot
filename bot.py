@@ -107,21 +107,24 @@ def main():
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
-        states={CHAT: [MessageHandler(Filters.text & ~Filters.command, chat)], END_CHAT: [CommandHandler("end", end_chat)]},
+        states={
+            CHAT: [MessageHandler(Filters.text & ~Filters.command, chat)],
+            END_CHAT: [CommandHandler("end", end_chat)]
+        },
         fallbacks=[CommandHandler("end", end_chat)],
     )
 
     dp.add_handler(conv_handler)
 
-    # تشغيل Webhook بدلاً من Polling
     updater.start_webhook(
-    listen="0.0.0.0",
-    port=int(os.environ.get("PORT", 8443)),
-    url_path=TELEGRAM_BOT_TOKEN
-)
-updater.bot.setWebhook(WEBHOOK_URL)
+        listen="0.0.0.0",
+        port=int(os.environ.get("PORT", 8443)),
+        url_path=TELEGRAM_BOT_TOKEN
+    )
 
-    updater.idle()
+    updater.bot.setWebhook(f"{os.getenv('RENDER_EXTERNAL_URL')}/{TELEGRAM_BOT_TOKEN}")
+
+    updater.idle()  # 🔹 هذا السطر لا يجب أن يحتوي على أي مسافات إضافية
 
 if __name__ == "__main__":
     main()
