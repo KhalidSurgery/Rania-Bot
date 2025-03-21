@@ -116,15 +116,21 @@ def main():
 
     dp.add_handler(conv_handler)
 
+    # 🔹 ضبط Webhook بالشكل الصحيح
+    webhook_url = f"{os.getenv('RENDER_EXTERNAL_URL')}/{TELEGRAM_BOT_TOKEN}"
+    
     updater.start_webhook(
         listen="0.0.0.0",
         port=int(os.environ.get("PORT", 8443)),
         url_path=TELEGRAM_BOT_TOKEN
     )
 
-    updater.bot.setWebhook(f"{os.getenv('RENDER_EXTERNAL_URL')}/{TELEGRAM_BOT_TOKEN}")
+    updater.bot.setWebhook(webhook_url)
 
-    updater.idle()  # 🔹 هذا السطر لا يجب أن يحتوي على أي مسافات إضافية
+    updater.idle()
+
+if __name__ == "__main__":
+    main()
 
 if __name__ == "__main__":
     main()
