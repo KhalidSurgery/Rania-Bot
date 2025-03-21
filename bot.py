@@ -12,7 +12,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 WHATSAPP_NUMBER = os.getenv("WHATSAPP_NUMBER")
 CALLMEBOT_API_KEY = os.getenv("CALLMEBOT_API_KEY")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-WEBHOOK_URL = f"https://{os.getenv('RENDER_EXTERNAL_URL')}/{TELEGRAM_BOT_TOKEN}"
+WEBHOOK_URL = f"{os.getenv('RENDER_EXTERNAL_URL')}/{TELEGRAM_BOT_TOKEN}"
 
 # دالة الاتصال بـ GPT مع تعليمات "رانية"
 def ask_gpt_rania(user_input):
@@ -115,11 +115,11 @@ def main():
 
     # تشغيل Webhook بدلاً من Polling
     updater.start_webhook(
-        listen="0.0.0.0",
-        port=int(os.environ.get("PORT", 8443)),  # استخدم المنفذ الصحيح
-        url_path=TELEGRAM_BOT_TOKEN
-    )
-    updater.bot.setWebhook(WEBHOOK_URL)
+    listen="0.0.0.0",
+    port=int(os.environ.get("PORT", 8443)),
+    url_path=TELEGRAM_BOT_TOKEN
+)
+updater.bot.setWebhook(WEBHOOK_URL)
 
     updater.idle()
 
