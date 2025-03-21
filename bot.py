@@ -56,12 +56,9 @@ if valid_phone:
 
     update.message.reply_text(f"شكرًا {name}! يمكنك الآن طرح استفساراتك.")
     return CHAT
-
 else:
     update.message.reply_text("⚠️ رقم الهاتف غير صحيح. يرجى إدخال رقم عراقي صحيح بصيغة 07XXXXXXXXX أو 964XXXXXXXXX.")
     return ASK_PHONE  # إعادة طلب الرقم الصحيح
-
-
 
 # التعامل مع المحادثة العامة بعد إدخال البيانات
 def chat(update: Update, context: CallbackContext) -> int:
