@@ -38,6 +38,9 @@ def ask_phone(update: Update, context: CallbackContext) -> int:
 
     update.message.reply_text(f"شكرًا {name}! يمكنك الآن طرح استفساراتك.")
     return CHAT
+def chat(update: Update, context: CallbackContext) -> int:
+    update.message.reply_text("تم استلام الرسالة، شكرًا لك!")
+    return ConversationHandler.END
 
 # إعداد البوت
 def main():
