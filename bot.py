@@ -47,28 +47,33 @@ def end_chat(update: Update, context: CallbackContext) -> int:
     return END_CHAT
 
 # إعداد البوت
+from telegram.ext import Updater
+
+# تأكد من تعريف المتغير قبل استخدامه
 def main():
-    updater = Updater(TELEGRAM_BOT_TOKEN, use_context=True)
+    updater = Updater(token=TELEGRAM_BOT_TOKEN, use_context=True)  # تعريف الـ Updater هنا
     dp = updater.dispatcher
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
-        states={CHAT: [MessageHandler(Filters.text & ~Filters.command, chat)], END_CHAT: [CommandHandler("end", end_chat)]},
-        fallbacks=[CommandHandler("end", end_chat)],
+        states={CHAT: [MessageHandler(Filters.text & ~Filters.command, chat)], 
+                END_CHAT: [CommandHandler("end", end_chat)]},
+        fallbacks=[CommandHandler("end", end_chat)]
     )
 
     dp.add_handler(conv_handler)
 
     # 🔹 ضبط Webhook بشكل صحيح
-updater.start_webhook(
-    listen="0.0.0.0",
-    port=int(os.environ.get("PORT", 8443)),
-    url_path=TELEGRAM_BOT_TOKEN
-)
-updater.bot.setWebhook(f"https://rania-bot.onrender.com/{TELEGRAM_BOT_TOKEN}")
+    updater.start_webhook(
+        listen="0.0.0.0",
+        port=int(os.environ.get("PORT", 8443)),
+        url_path=TELEGRAM_BOT_TOKEN
+    )
+    
+    updater.bot.setWebhook(f"https://rania-bot.onrender.com/{TELEGRAM_BOT_TOKEN}")
 
-updater.idle()  # تأكد أن هذه في نفس المستوى
-
+    updater.idle()
 
 if __name__ == "__main__":
     main()
+
