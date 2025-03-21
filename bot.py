@@ -1,6 +1,6 @@
-import openai  # استدعاء مكتبة OpenAI
-import os  # استدعاء مكتبة os للوصول إلى المتغيرات البيئية
-import requests  # استدعاء مكتبة requests لإرسال الإشعارات إلى واتساب
+import openai  # مكتبة OpenAI للتفاعل مع ChatGPT
+import os  # مكتبة os للوصول إلى متغيرات البيئة
+import requests  # مكتبة requests لإرسال الإشعارات إلى واتساب
 from telegram import Update
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, ConversationHandler, CallbackContext
 
@@ -13,7 +13,7 @@ WHATSAPP_NUMBER = os.getenv("WHATSAPP_NUMBER")  # رقم واتساب العيا
 CALLMEBOT_API_KEY = os.getenv("CALLMEBOT_API_KEY")  # API Key من CallMeBot
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")  # مفتاح API لـ Telegram
 
-# دالة الاتصال بـ GPT بنفس تعليمات "رانية"
+# دالة الاتصال بـ GPT باستخدام تعليمات "رانية"
 def ask_gpt_rania(user_input):
     openai.api_key = OPENAI_API_KEY  # تعيين مفتاح OpenAI
 
@@ -32,7 +32,7 @@ def send_whatsapp_message(name, phone, chat_summary):
     url = f"https://api.callmebot.com/whatsapp.php?phone={WHATSAPP_NUMBER}&text={message}&apikey={CALLMEBOT_API_KEY}"
     requests.get(url)
 
-# بدء المحادثة
+# دالة بدء المحادثة
 def start(update: Update, context: CallbackContext) -> int:
     update.message.reply_text("مرحبًا! أنا رانية، مساعدتك الافتراضية في عيادة الدكتور خالد حسون. كيف يمكنني مساعدتك اليوم؟")
     return CHAT
@@ -43,7 +43,7 @@ def chat(update: Update, context: CallbackContext) -> int:
     response = ask_gpt_rania(user_input)  # إرسالها إلى GPT والحصول على الرد
     update.message.reply_text(response)  # إرسال الرد للمستخدم
 
-    # تخزين بيانات المحادثة
+    # ✅ تخزين بيانات المحادثة في قائمة
     if "chat_summary" not in context.user_data:
         context.user_data["chat_summary"] = []
     context.user_data["chat_summary"].append(f"المستخدم: {user_input}\nرانية: {response}")
@@ -58,7 +58,7 @@ def end_chat(update: Update, context: CallbackContext) -> int:
     phone = context.user_data.get("phone", "غير معروف")
     chat_summary = "\n".join(context.user_data.get("chat_summary", []))
     
-    # إرسال البيانات إلى واتساب
+    # ✅ إرسال بيانات المحادثة إلى واتساب
     send_whatsapp_message(name, phone, chat_summary)
     
     return END_CHAT
