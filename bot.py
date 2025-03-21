@@ -78,7 +78,14 @@ def main():
     )
 
     dp.add_handler(conv_handler)
-    updater.start_polling()
+
+    # 🔹 استخدام Webhook بدلاً من Polling
+    updater.start_webhook(listen="0.0.0.0",
+                          port=int(os.environ.get("PORT", 5000)),
+                          url_path=TELEGRAM_BOT_TOKEN)
+
+    updater.bot.setWebhook(f"https://{os.environ.get('RENDER_EXTERNAL_URL')}/{TELEGRAM_BOT_TOKEN}")
+
     updater.idle()
 
 if __name__ == "__main__":
