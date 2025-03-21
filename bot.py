@@ -81,8 +81,8 @@ def main():
 
     # 🔹 استخدام Webhook بدلاً من Polling
     updater.start_webhook(listen="0.0.0.0",
-                          port=int(os.environ.get("PORT", 5000)),
-                          url_path=TELEGRAM_BOT_TOKEN)
+                      port=8443,  # ✅ استخدم منفذ مدعوم من تيليجرام
+                      url_path=TELEGRAM_BOT_TOKEN)
 
     updater.bot.setWebhook(f"https://{os.environ.get('RENDER_EXTERNAL_URL')}/{TELEGRAM_BOT_TOKEN}")
 
