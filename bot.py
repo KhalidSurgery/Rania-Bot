@@ -12,7 +12,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 WHATSAPP_NUMBER = os.getenv("WHATSAPP_NUMBER")
 CALLMEBOT_API_KEY = os.getenv("CALLMEBOT_API_KEY")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-WEBHOOK_URL = f"{os.getenv('RENDER_EXTERNAL_URL')}/{TELEGRAM_BOT_TOKEN}"
+WEBHOOK_URL = f"https://rania-bot.onrender.com/{TELEGRAM_BOT_TOKEN}"
 
 # دالة الاتصال بـ GPT
 def ask_gpt_rania(user_input):
