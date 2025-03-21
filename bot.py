@@ -27,17 +27,41 @@ def ask_name(update: Update, context: CallbackContext) -> int:
     update.message.reply_text("شكرًا! الآن أدخل رقم هاتفك.")
     return ASK_PHONE
 
+import re  # مكتبة للتحقق من الأرقام
+
+def is_valid_phone_number(phone):
+    """ التحقق من صحة رقم الهاتف المدخل """
+    phone = re.sub(r'\D', '', phone)  # إزالة أي أحرف غير رقمية
+    if phone.startswith("964") and len(phone) == 12:
+        return phone  # الرقم صحيح
+    elif phone.startswith("0") and len(phone) == 11:
+        return "964" + phone[1:]  # تحويل الرقم إلى الصيغة الدولية
+    else:
+        return None  # رقم غير صالح
+
 # طلب رقم الهاتف
 def ask_phone(update: Update, context: CallbackContext) -> int:
-    context.user_data['phone'] = update.message.text
-    name = context.user_data['name']
-    phone = context.user_data['phone']
+    phone = update.message.text.strip()
+    valid_phone = is_valid_phone_number(phone)  # تحقق من صحة الرقم
 
-    # إرسال إشعار إلى واتساب
-    send_whatsapp_message(name, phone)
+if valid_phone:
+    context.user_data['phone'] = valid_phone
+    name = context.user_data['name']
+
+    # ✅ طباعة البيانات للتأكد قبل الإرسال إلى واتساب
+    print(f"📞 إرسال إلى واتساب: {valid_phone}, 👤 اسم المريض: {name}")
+
+    # ✅ إرسال البيانات إلى واتساب
+    send_whatsapp_message(name, valid_phone)
 
     update.message.reply_text(f"شكرًا {name}! يمكنك الآن طرح استفساراتك.")
     return CHAT
+
+else:
+    update.message.reply_text("⚠️ رقم الهاتف غير صحيح. يرجى إدخال رقم عراقي صحيح بصيغة 07XXXXXXXXX أو 964XXXXXXXXX.")
+    return ASK_PHONE  # إعادة طلب الرقم الصحيح
+
+
 
 # التعامل مع المحادثة العامة بعد إدخال البيانات
 def chat(update: Update, context: CallbackContext) -> int:
