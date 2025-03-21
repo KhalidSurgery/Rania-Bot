@@ -60,14 +60,15 @@ def main():
     dp.add_handler(conv_handler)
 
     # 🔹 ضبط Webhook بشكل صحيح
-    updater.start_webhook(
-        listen="0.0.0.0",
-        port=8443,
-        url_path=TELEGRAM_BOT_TOKEN,
-        webhook_url=WEBHOOK_URL
-    )
+updater.start_webhook(
+    listen="0.0.0.0",
+    port=int(os.environ.get("PORT", 8443)),
+    url_path=TELEGRAM_BOT_TOKEN
+)
+updater.bot.setWebhook(f"https://rania-bot.onrender.com/{TELEGRAM_BOT_TOKEN}")
 
-    updater.idle()
+updater.idle()  # تأكد أن هذه في نفس المستوى
+
 
 if __name__ == "__main__":
     main()
