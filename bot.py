@@ -1,5 +1,6 @@
-import openai
+import asyncio
 import os
+import openai
 import requests
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext, ConversationHandler
@@ -57,10 +58,13 @@ async def end_chat(update: Update, context: CallbackContext) -> int:
     return ConversationHandler.END
 
 # تشغيل البوت
-async def main():
+def main():
+    # استخدام get_event_loop() بدلاً من asyncio.run()
+    loop = asyncio.get_event_loop()
+    
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
     
-    # إضافة ConversationHandler بدلاً من CommandHandler المباشر
+    # إضافة ConversationHandler
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
         states={
@@ -70,9 +74,16 @@ async def main():
     )
     
     application.add_handler(conv_handler)
-    await application.run_polling()
+    
+    try:
+        # استخدام run_forever بدلاً من run_polling
+        loop.run_until_complete(application.run_polling())
+    except KeyboardInterrupt:
+        # التعامل مع إيقاف البرنامج
+        print("تم إيقاف البوت")
+    finally:
+        # إغلاق التطبيق بشكل آمن
+        loop.run_until_complete(application.stop())
 
-# التصحيح الرئيسي هنا: تغيير __name__ إلى "__main__"
 if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
+    main()
