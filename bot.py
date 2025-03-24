@@ -2,78 +2,71 @@ import openai
 import os
 import requests
 from telegram import Update
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, ConversationHandler, CallbackContext
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 
 # تعريف الحالات في المحادثة
 CHAT, END_CHAT = range(2)
 
-# متغيرات البيئة
+# جلب مفاتيح API من متغيرات البيئة
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 WHATSAPP_NUMBER = os.getenv("WHATSAPP_NUMBER")
 CALLMEBOT_API_KEY = os.getenv("CALLMEBOT_API_KEY")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-WEBHOOK_URL = f"https://rania-bot.onrender.com/{TELEGRAM_BOT_TOKEN}"
 
-# دالة الاتصال بـ GPT
+# التحقق من المفاتيح
+if not OPENAI_API_KEY:
+    raise ValueError("OPENAI_API_KEY is not set in the environment variables")
+if not TELEGRAM_BOT_TOKEN:
+    raise ValueError("TELEGRAM_BOT_TOKEN is not set in the environment variables")
+
+# الاتصال بـ OpenAI
 def ask_gpt_rania(user_input):
-    openai.api_key = OPENAI_API_KEY
-    response = openai.ChatCompletion.create(
+    client = openai.OpenAI(api_key=OPENAI_API_KEY)
+    response = client.chat.completions.create(
         model="gpt-4",
-        messages=[{"role": "system", "content": "مرحبًا! أنا رانية..."}, {"role": "user", "content": user_input}]
+        messages=[
+            {"role": "system", "content": "مرحبًا! أنا رانية، مساعدتك الافتراضية في عيادة الدكتور خالد حسون."},
+            {"role": "user", "content": user_input}
+        ]
     )
-    return response["choices"][0]["message"]["content"]
+    return response.choices[0].message.content
 
 # إرسال إشعار واتساب
 def send_whatsapp_message(name, phone, chat_summary):
+    if not WHATSAPP_NUMBER or not CALLMEBOT_API_KEY:
+        return  # تجنب الخطأ إذا لم تكن القيم محددة
     message = f"📢 مريض جديد بدأ المحادثة:\n👤 الاسم: {name}\n📞 الهاتف: {phone}\n📌 ملخص المحادثة: {chat_summary}"
     url = f"https://api.callmebot.com/whatsapp.php?phone={WHATSAPP_NUMBER}&text={message}&apikey={CALLMEBOT_API_KEY}"
     requests.get(url)
 
 # بدء المحادثة
-def start(update: Update, context: CallbackContext) -> int:
-    update.message.reply_text("مرحبًا! أنا رانية، مساعدتك الافتراضية...")
+async def start(update: Update, context: CallbackContext) -> int:
+    await update.message.reply_text("مرحبًا! أنا رانية، مساعدتك الافتراضية...")
     return CHAT
 
 # استقبال الرسائل
-def chat(update: Update, context: CallbackContext) -> int:
+async def chat(update: Update, context: CallbackContext) -> int:
     user_input = update.message.text
     response = ask_gpt_rania(user_input)
-    update.message.reply_text(response)
+    await update.message.reply_text(response)
     return CHAT
 
 # إنهاء المحادثة
-def end_chat(update: Update, context: CallbackContext) -> int:
-    update.message.reply_text("تم إنهاء المحادثة، شكرًا لك!")
+async def end_chat(update: Update, context: CallbackContext) -> int:
+    await update.message.reply_text("تم إنهاء المحادثة، شكرًا لك!")
     return END_CHAT
 
-# إعداد البوت
-from telegram.ext import Updater
+# تشغيل البوت
+async def main():
+    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
-# تأكد من تعريف المتغير قبل استخدامه
-def main():
-    updater = Updater(token=TELEGRAM_BOT_TOKEN, use_context=True)  # تعريف الـ Updater هنا
-    dp = updater.dispatcher
+    conv_handler = CommandHandler("start", start)
+    application.add_handler(conv_handler)
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
+    application.add_handler(CommandHandler("end", end_chat))
 
-    conv_handler = ConversationHandler(
-        entry_points=[CommandHandler("start", start)],
-        states={CHAT: [MessageHandler(Filters.text & ~Filters.command, chat)], 
-                END_CHAT: [CommandHandler("end", end_chat)]},
-        fallbacks=[CommandHandler("end", end_chat)]
-    )
-
-    dp.add_handler(conv_handler)
-
-    # 🔹 ضبط Webhook بشكل صحيح
-    updater.start_webhook(
-        listen="0.0.0.0",
-        port=int(os.environ.get("PORT", 8443)),
-        url_path=TELEGRAM_BOT_TOKEN
-    )
-    
-    updater.bot.setWebhook(f"https://rania-bot.onrender.com/{TELEGRAM_BOT_TOKEN}")
-
-    updater.idle()
+    await application.run_polling()
 
 if __name__ == "__main__":
-    main()
-
+    import asyncio
+    asyncio.run(main())
