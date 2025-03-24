@@ -4,6 +4,7 @@ import openai
 import requests
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext, ConversationHandler
+from telegram.error import Conflict
 
 # تعريف الحالات في المحادثة
 CHAT, END_CHAT = range(2)
@@ -57,33 +58,44 @@ async def end_chat(update: Update, context: CallbackContext) -> int:
     await update.message.reply_text("تم إنهاء المحادثة، شكرًا لك!")
     return ConversationHandler.END
 
+# معالج الأخطاء
+async def error_handler(update: Update, context: CallbackContext):
+    print(f"حدث خطأ: {context.error}")
+
 # تشغيل البوت
-def main():
-    # استخدام get_event_loop() بدلاً من asyncio.run()
-    loop = asyncio.get_event_loop()
-    
-    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
-    
-    # إضافة ConversationHandler
-    conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('start', start)],
-        states={
-            CHAT: [MessageHandler(filters.TEXT & ~filters.COMMAND, chat)],
-        },
-        fallbacks=[CommandHandler('end', end_chat)]
-    )
-    
-    application.add_handler(conv_handler)
-    
+async def main():
     try:
-        # استخدام run_forever بدلاً من run_polling
-        loop.run_until_complete(application.run_polling())
-    except KeyboardInterrupt:
-        # التعامل مع إيقاف البرنامج
-        print("تم إيقاف البوت")
+        # إنشاء التطبيق
+        application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+        
+        # إضافة معالج الأخطاء
+        application.add_error_handler(error_handler)
+        
+        # إضافة ConversationHandler
+        conv_handler = ConversationHandler(
+            entry_points=[CommandHandler('start', start)],
+            states={
+                CHAT: [MessageHandler(filters.TEXT & ~filters.COMMAND, chat)],
+            },
+            fallbacks=[CommandHandler('end', end_chat)]
+        )
+        
+        application.add_handler(conv_handler)
+        
+        # تنظيف أي تحديثات متبقية
+        await application.bot.delete_webhook(drop_pending_updates=True)
+        
+        print("جارِ تشغيل البوت...")
+        await application.run_polling()
+        
+    except Conflict:
+        print("تم اكتشاف نسخة أخرى من البوت تعمل بالفعل. يرجى إيقاف النسخة الأخرى أولاً.")
+    except Exception as e:
+        print(f"حدث خطأ غير متوقع: {e}")
     finally:
-        # إغلاق التطبيق بشكل آمن
-        loop.run_until_complete(application.stop())
+        if 'application' in locals():
+            await application.stop()
+            await application.shutdown()
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
