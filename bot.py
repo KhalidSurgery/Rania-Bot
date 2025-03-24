@@ -3,10 +3,17 @@ import os
 import openai
 import requests
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext, ConversationHandler
-from telegram.error import Conflict
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    MessageHandler,
+    filters,
+    CallbackContext,
+    ConversationHandler
+)
+from telegram.error import Conflict, NetworkError
 
-# تعريف الحالات في المحادثة
+# تعريف حالات المحادثة
 CHAT, END_CHAT = range(2)
 
 # جلب مفاتيح API من متغيرات البيئة
@@ -15,15 +22,17 @@ WHATSAPP_NUMBER = os.getenv("WHATSAPP_NUMBER")
 CALLMEBOT_API_KEY = os.getenv("CALLMEBOT_API_KEY")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
-# التحقق من المفاتيح
+# التحقق من وجود المفاتيح
 if not OPENAI_API_KEY:
-    raise ValueError("OPENAI_API_KEY is not set in the environment variables")
+    raise ValueError("يجب تعيين OPENAI_API_KEY في متغيرات البيئة")
 if not TELEGRAM_BOT_TOKEN:
-    raise ValueError("TELEGRAM_BOT_TOKEN is not set in the environment variables")
+    raise ValueError("يجب تعيين TELEGRAM_BOT_TOKEN في متغيرات البيئة")
 
-# الاتصال بـ OpenAI
-def ask_gpt_rania(user_input):
-    openai.api_key = OPENAI_API_KEY
+# تهيئة OpenAI
+openai.api_key = OPENAI_API_KEY
+
+def ask_gpt_rania(user_input: str) -> str:
+    """استدعاء نموذج GPT-4 للحصول على إجابة"""
     response = openai.ChatCompletion.create(
         model="gpt-4",
         messages=[
@@ -33,86 +42,123 @@ def ask_gpt_rania(user_input):
     )
     return response.choices[0].message.content
 
-# إرسال إشعار واتساب
-def send_whatsapp_message(name, phone, chat_summary):
+def send_whatsapp_notification(name: str, phone: str, summary: str) -> None:
+    """إرسال إشعار عبر واتساب"""
     if not WHATSAPP_NUMBER or not CALLMEBOT_API_KEY:
-        return  # تجنب الخطأ إذا لم تكن القيم محددة
-    message = f"📢 مريض جديد بدأ المحادثة:\n👤 الاسم: {name}\n📞 الهاتف: {phone}\n📌 ملخص المحادثة: {chat_summary}"
-    url = f"https://api.callmebot.com/whatsapp.php?phone={WHATSAPP_NUMBER}&text={message}&apikey={CALLMEBOT_API_KEY}"
-    requests.get(url)
+        return
+        
+    message = (
+        f"📢 مريض جديد بدأ المحادثة:\n"
+        f"👤 الاسم: {name}\n"
+        f"📞 الهاتف: {phone}\n"
+        f"📌 ملخص المحادثة: {summary}"
+    )
+    url = (
+        f"https://api.callmebot.com/whatsapp.php?"
+        f"phone={WHATSAPP_NUMBER}&"
+        f"text={message}&"
+        f"apikey={CALLMEBOT_API_KEY}"
+    )
+    requests.get(url, timeout=10)
 
-# بدء المحادثة
 async def start(update: Update, context: CallbackContext) -> int:
-    await update.message.reply_text("مرحبًا! أنا رانية، مساعدتك الافتراضية...")
+    """بدء المحادثة مع المستخدم"""
+    await update.message.reply_text(
+        "مرحبًا! أنا رانية، المساعدة الافتراضية في عيادة الدكتور خالد حسون.\n"
+        "كيف يمكنني مساعدتك اليوم؟"
+    )
     return CHAT
 
-# استقبال الرسائل
 async def chat(update: Update, context: CallbackContext) -> int:
+    """معالجة رسائل المستخدم"""
     user_input = update.message.text
-    response = ask_gpt_rania(user_input)
-    await update.message.reply_text(response)
+    try:
+        response = ask_gpt_rania(user_input)
+        await update.message.reply_text(response)
+        
+        # إرسال إشعار واتساب (اختياري)
+        if update.message.from_user:
+            send_whatsapp_notification(
+                name=update.message.from_user.full_name,
+                phone="غير معروف",
+                summary=user_input[:100]  # إرسال أول 100 حرف من المحادثة
+            )
+            
+    except Exception as e:
+        print(f"خطأ في معالجة الرسالة: {e}")
+        await update.message.reply_text("عذرًا، حدث خطأ أثناء معالجة طلبك.")
+    
     return CHAT
 
-# إنهاء المحادثة
 async def end_chat(update: Update, context: CallbackContext) -> int:
-    await update.message.reply_text("تم إنهاء المحادثة، شكرًا لك!")
+    """إنهاء المحادثة"""
+    await update.message.reply_text(
+        "شكرًا لك على تواصلك معنا. "
+        "لا تتردد في البدء بمحادثة جديدة إذا كان لديك أي استفسارات أخرى."
+    )
     return ConversationHandler.END
 
-# معالج الأخطاء
-async def error_handler(update: Update, context: CallbackContext):
+async def error_handler(update: Update, context: CallbackContext) -> None:
+    """معالج الأخطاء العام"""
     print(f"حدث خطأ: {context.error}")
+    if update and update.message:
+        await update.message.reply_text("عذرًا، حدث خطأ غير متوقع.")
 
-# تشغيل البوت
-async def main():
-    application = None
+async def run_bot() -> None:
+    """تشغيل البوت الرئيسي"""
+    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+    
+    # إضافة معالج الأخطاء
+    application.add_error_handler(error_handler)
+    
+    # إعداد محادثة البوت
+    conv_handler = ConversationHandler(
+        entry_points=[CommandHandler('start', start)],
+        states={
+            CHAT: [MessageHandler(filters.TEXT & ~filters.COMMAND, chat)],
+        },
+        fallbacks=[CommandHandler('end', end_chat)],
+        allow_reentry=True
+    )
+    
+    application.add_handler(conv_handler)
+    
     try:
-        # إنشاء التطبيق
-        application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
-        
-        # إضافة معالج الأخطاء
-        application.add_error_handler(error_handler)
-        
-        # إضافة ConversationHandler
-        conv_handler = ConversationHandler(
-            entry_points=[CommandHandler('start', start)],
-            states={
-                CHAT: [MessageHandler(filters.TEXT & ~filters.COMMAND, chat)],
-            },
-            fallbacks=[CommandHandler('end', end_chat)]
-        )
-        
-        application.add_handler(conv_handler)
-        
-        # تنظيف أي تحديثات متبقية
+        # تنظيف التحديثات القديمة قبل البدء
         await application.bot.delete_webhook(drop_pending_updates=True)
         
-        print("جارِ تشغيل البوت...")
-        await application.initialize()  # تهيئة التطبيق
-        await application.start()       # بدء التطبيق
-        await application.updater.start_polling()  # بدء استقبال التحديثات
+        print("✅ البوت يعمل الآن...")
+        await application.run_polling(
+            poll_interval=1.0,
+            timeout=10,
+            drop_pending_updates=True
+        )
         
-        # البقاء في حلقة غير منتهية حتى يتم إيقاف البوت
-        while True:
-            await asyncio.sleep(3600)  # النوم لمدة ساعة ثم التكرار
-            
     except Conflict:
-        print("تم اكتشاف نسخة أخرى من البوت تعمل بالفعل. يرجى إيقاف النسخة الأخرى أولاً.")
+        print("⚠️ خطأ: تم اكتشاف نسخة أخرى من البوت تعمل بالفعل!")
+    except NetworkError as e:
+        print(f"⚠️ خطأ شبكة: {e}")
     except Exception as e:
-        print(f"حدث خطأ غير متوقع: {str(e)}")  # تحويل الاستثناء لسلسلة نصية
+        print(f"⚠️ خطأ غير متوقع: {e}")
     finally:
-        if application:
-            try:
-                if application.updater:
-                    await application.updater.stop()
-                await application.stop()
-                await application.shutdown()
-            except Exception as e:
-                print(f"حدث خطأ أثناء الإيقاف: {str(e)}")
+        if application.running:
+            await application.stop()
+            print("⏹️ تم إيقاف البوت")
+
+async def main() -> None:
+    """الدالة الرئيسية مع إعادة تشغيل تلقائي"""
+    while True:
+        try:
+            await run_bot()
+        except Exception as e:
+            print(f"🔄 إعادة التشغيل بسبب خطأ: {e}")
+            await asyncio.sleep(5)  # انتظار 5 ثوان قبل إعادة المحاولة
 
 if __name__ == "__main__":
     try:
+        print("🚀 بدء تشغيل بوت التليجرام...")
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("تم إيقاف البوت بواسطة المستخدم")
+        print("⏹️ تم إيقاف البوت بواسطة المستخدم")
     except Exception as e:
-        print(f"حدث خطأ في التشغيل الرئيسي: {str(e)}")
+        print(f"💥 خطأ حرج: {e}")
