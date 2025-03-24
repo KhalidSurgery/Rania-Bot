@@ -64,6 +64,7 @@ async def error_handler(update: Update, context: CallbackContext):
 
 # تشغيل البوت
 async def main():
+    application = None
     try:
         # إنشاء التطبيق
         application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
@@ -86,16 +87,32 @@ async def main():
         await application.bot.delete_webhook(drop_pending_updates=True)
         
         print("جارِ تشغيل البوت...")
-        await application.run_polling()
+        await application.initialize()  # تهيئة التطبيق
+        await application.start()       # بدء التطبيق
+        await application.updater.start_polling()  # بدء استقبال التحديثات
         
+        # البقاء في حلقة غير منتهية حتى يتم إيقاف البوت
+        while True:
+            await asyncio.sleep(3600)  # النوم لمدة ساعة ثم التكرار
+            
     except Conflict:
         print("تم اكتشاف نسخة أخرى من البوت تعمل بالفعل. يرجى إيقاف النسخة الأخرى أولاً.")
     except Exception as e:
-        print(f"حدث خطأ غير متوقع: {e}")
+        print(f"حدث خطأ غير متوقع: {str(e)}")  # تحويل الاستثناء لسلسلة نصية
     finally:
-        if 'application' in locals():
-            await application.stop()
-            await application.shutdown()
+        if application:
+            try:
+                if application.updater:
+                    await application.updater.stop()
+                await application.stop()
+                await application.shutdown()
+            except Exception as e:
+                print(f"حدث خطأ أثناء الإيقاف: {str(e)}")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("تم إيقاف البوت بواسطة المستخدم")
+    except Exception as e:
+        print(f"حدث خطأ في التشغيل الرئيسي: {str(e)}")
