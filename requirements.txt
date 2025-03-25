@@ -2,3 +2,5 @@ flask
 openai
 requests
 python-dotenv
+waitress==2.1.2
+gunicorn==20.1.0
