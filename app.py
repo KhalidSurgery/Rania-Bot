@@ -4,90 +4,73 @@ import os
 import requests
 from datetime import datetime
 
-# تهيئة التطبيق
+# ===== التهيئة الأساسية =====
 app = Flask(__name__, static_url_path='/static')
 
-# تعليمات المساعد الطبي
-MEDICAL_GUIDE = """
-أنت مساعد طبي متخصص في عيادة الدكتور خالد حسون الجراحية.
-المهام:
-1. الرد على استفسارات العمليات الجراحية
-2. شرح التحضيرات اللازمة قبل الجراحة
-3. تقديم التعليمات ما بعد العملية
-4. توجيه الحالات الطارئة للعيادة مباشرة
-
-الممنوعات:
-- لا تقم بتشخيص أي حالة
-- لا تصف أي أدوية
-- لا تعطي وصفات طبية
-
-المعلومات الأساسية:
-- العيادة: الرياض، حي الملك فهد
-- هاتف الطوارئ: 0501234567
-- أوقات العمل: من الأحد إلى الخميس (8 ص - 4 م)
-"""
-
-# الأسئلة الشائعة
-FAQ = {
-    "التكلفة": "تختلف التكلفة حسب نوع الجراحة، يرجى التواصل مع الإدارة للحصول على تفاصيل دقيقة",
-    "التحضير": "الصيام 8 ساعات قبل الجراحة، وإحضار جميع التقارير الطبية السابقة",
-    "المدة": "معظم الجراحات تستغرق من 1 إلى 3 ساعات حسب الحالة"
+# ===== إعدادات العيادة (تسحب من Environment Variables) =====
+clinic_info = {
+    "name": os.getenv("CLINIC_NAME", "عيادة الدكتور خالد حسون الجراحية"),
+    "phone": os.getenv("EMERGENCY_PHONE", "0501234567"),
+    "address": os.getenv("CLINIC_ADDRESS", "الرياض، حي الملك فهد، شارع التحلية"),
+    "hours": os.getenv("WORKING_HOURS", "الأحد-الخميس 8 صباحاً - 4 مساءً")
 }
 
-# دالة إرسال إشعار الواتساب
-def send_whatsapp_notification(message):
+# ===== التعليمات الطبية (تستخدم المتغيرات أعلاه) =====
+MEDICAL_GUIDE = f"""
+أنت مساعد طبي في {clinic_info['name']}.
+المعلومات الأساسية:
+- 📞 هاتف الطوارئ: {clinic_info['phone']}
+- 🏥 العنوان: {clinic_info['address']}
+- ⏰ أوقات العمل: {clinic_info['hours']}
+
+القواعد:
+1. ❌ لا تقم بتشخيص الأمراض
+2. 💊 لا تصف أدوية
+3. 🚨 للحالات الطارئة: اتصل بالرقم أعلاه مباشرة
+"""
+
+# ===== دوال المساعدة =====
+def send_whatsapp(msg):
     try:
-        whatsapp_number = os.getenv("WHATSAPP_NUMBER")
-        api_key = os.getenv("CALLMEBOT_API_KEY")
-        
-        if not whatsapp_number or not api_key:
+        if not (os.getenv("WHATSAPP_NUMBER") and os.getenv("CALLMEBOT_API_KEY")):
             return False
             
-        url = f"https://api.callmebot.com/whatsapp.php?phone={whatsapp_number}&text={message}&apikey={api_key}"
-        response = requests.get(url, timeout=10)
-        return response.status_code == 200
+        url = f"https://api.callmebot.com/whatsapp.php?phone={os.getenv('WHATSAPP_NUMBER')}&text={msg}&apikey={os.getenv('CALLMEBOT_API_KEY')}"
+        requests.get(url, timeout=5)
+        return True
     except:
         return False
 
-# الصفحة الرئيسية
+# ===== الروتات الأساسية =====
 @app.route('/')
 def home():
     return render_template('chat.html')
 
-# معالجة الأسئلة
 @app.route('/ask', methods=['POST'])
-def ask_question():
+def ask():
     try:
-        data = request.json
-        user_question = data.get('question', '').strip()
+        question = request.json.get('question', '').strip()
         
-        if not user_question:
+        if not question:
             return jsonify({"error": "الرجاء إدخال سؤال"}), 400
-        
-        # التحقق من الأسئلة الشائعة أولاً
-        if user_question in FAQ:
-            return jsonify({"answer": FAQ[user_question]})
-            
-        # استخدام الذكاء الاصطناعي للإجابة
+
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": MEDICAL_GUIDE},
-                {"role": "user", "content": user_question}
+                {"role": "user", "content": question}
             ],
             temperature=0.3
         )
         
-        answer = response.choices[0].message.content
-        return jsonify({"answer": answer})
+        return jsonify({"answer": response.choices[0].message.content})
         
     except Exception as e:
         print(f"Error: {str(e)}")
-        return jsonify({"error": "حدث خطأ أثناء معالجة السؤال"}), 500
+        return jsonify({"error": "حدث خطأ في معالجة سؤالك"}), 500
 
-# حجز المواعيد
 @app.route('/book', methods=['POST'])
-def book_appointment():
+def book():
     try:
         data = request.json
         name = data.get('name', '').strip()
@@ -97,31 +80,30 @@ def book_appointment():
         if not all([name, phone, date]):
             return jsonify({"error": "جميع الحقول مطلوبة"}), 400
             
-        # إرسال إشعار الواتساب
-        notification_msg = f"حجز موعد جديد:\nالاسم: {name}\nالهاتف: {phone}\nالتاريخ: {date}"
-        send_whatsapp_notification(notification_msg)
+        # إرسال إشعار
+        msg = f"""حجز موعد جديد:
+الاسم: {name}
+الهاتف: {phone}
+التاريخ: {date}
+العيادة: {clinic_info['name']}"""
+        
+        send_whatsapp(msg)
         
         return jsonify({
             "success": True,
-            "message": "تم استلام طلب الحجز، سنتواصل معك خلال 24 ساعة للتأكيد"
+            "message": "تم استلام الحجز بنجاح، سنتواصل معك خلال 24 ساعة"
         })
         
     except Exception as e:
         print(f"Error: {str(e)}")
-        return jsonify({"error": "حدث خطأ أثناء حجز الموعد"}), 500
+        return jsonify({"error": "حدث خطأ أثناء الحجز"}), 500
 
-# خدمة الملفات الثابتة
-@app.route('/static/<path:filename>')
-def serve_static(filename):
-    return send_from_directory(os.path.join(app.root_path, 'static'), filename)
-
+# ===== تشغيل التطبيق =====
 if __name__ == '__main__':
-    # تحميل متغيرات البيئة
     from dotenv import load_dotenv
     load_dotenv()
     
-    # التحقق من المفاتيح
     if not os.getenv("OPENAI_API_KEY"):
         raise ValueError("يجب تعيين OPENAI_API_KEY في ملف .env")
     
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000)
