@@ -99,11 +99,11 @@ def book():
         return jsonify({"error": "حدث خطأ أثناء الحجز"}), 500
 
 # ===== تشغيل التطبيق =====
+# ===== إعدادات الإنتاج =====
+def create_app():
+    return app
+
 if __name__ == '__main__':
-    from dotenv import load_dotenv
-    load_dotenv()
-    
-    if not os.getenv("OPENAI_API_KEY"):
-        raise ValueError("يجب تعيين OPENAI_API_KEY في ملف .env")
-    
-    app.run(host='0.0.0.0', port=5000)
+    # للتنمية المحلية فقط
+    from waitress import serve
+    serve(app, host="0.0.0.0", port=5000)
