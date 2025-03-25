@@ -100,7 +100,10 @@ def book():
 
 # ===== تشغيل التطبيق =====
 # ===== إعدادات الإنتاج =====
-def create_app():
+def create_app(environ=None, start_response=None):
+    if environ and start_response:
+        # للتوافق مع WSGI
+        return app(environ, start_response)
     return app
 
 if __name__ == '__main__':
