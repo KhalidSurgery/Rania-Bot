@@ -1,13 +1,14 @@
 from flask import Flask, render_template, request, jsonify, send_from_directory
-import openai
+from openai import OpenAI  # تغيير طريقة الاستيراد
 import os
 import requests
 from datetime import datetime
 
 # ===== التهيئة الأساسية =====
 app = Flask(__name__, static_url_path='/static')
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))  # تهيئة العميل الجديد
 
-# ===== إعدادات العيادة (تسحب من Environment Variables) =====
+# ===== إعدادات العيادة =====
 clinic_info = {
     "name": os.getenv("CLINIC_NAME", "عيادة الدكتور خالد حسون الجراحية"),
     "phone": os.getenv("EMERGENCY_PHONE", "0501234567"),
@@ -15,7 +16,6 @@ clinic_info = {
     "hours": os.getenv("WORKING_HOURS", "الأحد-الخميس 8 صباحاً - 4 مساءً")
 }
 
-# ===== التعليمات الطبية (تستخدم المتغيرات أعلاه) =====
 MEDICAL_GUIDE = f"""
 أنت مساعد طبي في {clinic_info['name']}.
 المعلومات الأساسية:
@@ -54,7 +54,7 @@ def ask():
         if not question:
             return jsonify({"error": "الرجاء إدخال سؤال"}), 400
 
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(  # التعديل هنا
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": MEDICAL_GUIDE},
@@ -80,7 +80,6 @@ def book():
         if not all([name, phone, date]):
             return jsonify({"error": "جميع الحقول مطلوبة"}), 400
             
-        # إرسال إشعار
         msg = f"""حجز موعد جديد:
 الاسم: {name}
 الهاتف: {phone}
@@ -99,14 +98,11 @@ def book():
         return jsonify({"error": "حدث خطأ أثناء الحجز"}), 500
 
 # ===== تشغيل التطبيق =====
-# ===== إعدادات الإنتاج =====
 def create_app(environ=None, start_response=None):
     if environ and start_response:
-        # للتوافق مع WSGI
         return app(environ, start_response)
     return app
 
 if __name__ == '__main__':
-    # للتنمية المحلية فقط
     from waitress import serve
     serve(app, host="0.0.0.0", port=5000)
