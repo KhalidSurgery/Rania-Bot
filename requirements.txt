@@ -1,5 +1,5 @@
 flask>=2.0.0
-openai
+openai>=1.0.0  # تأكد من استخدام الإصدار الجديد
 requests
 python-dotenv
 waitress==2.1.2
