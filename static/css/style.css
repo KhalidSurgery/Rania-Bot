@@ -1,75 +1,96 @@
-/* التنسيقات العامة */
+/* التنسيقات العامة - معدلة */
 body {
     font-family: 'Tajawal', sans-serif;
-    background-color: #f5f9ff;
+    background-color: #f0f7ff; /* لون أفتح */
     margin: 0;
-    padding: 0;
+    padding: 20px;
     direction: rtl;
 }
 
-/* تصميم شات البوكس */
+/* تصميم شات البوكس - معدل */
 .chat-container {
     max-width: 900px;
     margin: 20px auto;
     border-radius: 15px;
     overflow: hidden;
-    box-shadow: 0 0 25px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 5px 15px rgba(0, 120, 212, 0.1); /* ظل أزرق خفيف */
+    border: 1px solid #e0e0e0;
 }
 
-/* رأس الشات */
+/* رأس الشات - معدل */
 .chat-header {
-    background: linear-gradient(135deg, #1e88e5, #0d47a1);
+    background: linear-gradient(135deg, #0d6e9e, #0a4a6e); /* تدرج أزرق طبي */
     color: white;
     padding: 20px;
     text-align: center;
+    font-size: 1.2em;
 }
 
-/* منطقة الرسائل */
+/* منطقة الرسائل - معدلة */
 #chat-box {
     height: 500px;
     padding: 20px;
     background: #fff;
     overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #0d6e9e #f0f0f0;
 }
 
-/* تصميم الرسائل */
+/* تصميم الرسائل - معدل */
 .message {
     margin-bottom: 15px;
-    max-width: 70%;
+    max-width: 80%; /* اتساع أكبر للرسائل */
     padding: 12px 18px;
-    border-radius: 20px;
-    line-height: 1.5;
+    border-radius: 18px;
+    line-height: 1.6;
+    font-size: 16px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
 .user-message {
     background: #e3f2fd;
     margin-left: auto;
     border-bottom-right-radius: 5px;
+    color: #0a4a6e;
 }
 
 .bot-message {
-    background: #f1f1f1;
+    background: #f8f9fa;
     margin-right: auto;
     border-bottom-left-radius: 5px;
+    border: 1px solid #e0e0e0;
 }
 
-/* منطقة الإدخال */
+/* رسائل الحجز - إضافة جديدة */
+.booking-message {
+    background: #e8f5e9;
+    border-left: 4px solid #2e7d32;
+}
+
+/* منطقة الإدخال - معدلة */
 .input-area {
     display: flex;
     padding: 15px;
-    background: #f5f5f5;
+    background: #f5f9ff;
+    border-top: 1px solid #e0e0e0;
 }
 
 #user-input {
     flex: 1;
-    padding: 12px 15px;
-    border: 2px solid #ddd;
+    padding: 12px 20px;
+    border: 1px solid #ddd;
     border-radius: 30px;
     font-size: 16px;
+    outline: none;
+    transition: border 0.3s;
+}
+
+#user-input:focus {
+    border-color: #0d6e9e;
 }
 
 #send-btn {
-    background: #1e88e5;
+    background: #0d6e9e;
     color: white;
     border: none;
     border-radius: 50%;
@@ -78,9 +99,48 @@ body {
     margin-right: 10px;
     cursor: pointer;
     transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 #send-btn:hover {
-    background: #1565c0;
+    background: #0a4a6e;
     transform: scale(1.05);
+}
+
+/* زر الحجز - إضافة جديدة */
+#book-btn {
+    background: #2e7d32;
+    color: white;
+    border: none;
+    border-radius: 30px;
+    padding: 0 20px;
+    margin-left: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+#book-btn:hover {
+    background: #1b5e20;
+}
+
+/* رسائل التنبيه - إضافة جديدة */
+.alert-message {
+    background: #fff3e0;
+    border-left: 4px solid #ff6d00;
+    text-align: center;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 5px;
+}
+
+/* تأثيرات للرسائل الجديدة */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.message {
+    animation: fadeIn 0.3s ease-out;
 }
